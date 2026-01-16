@@ -1,0 +1,7 @@
+{
+  "name": "像素卫士 AI - UI 走查助手",
+  "description": "基于 AI 的 UI 设计走查工具，通过比对设计稿与开发实现截图，自动识别间距、文字、颜色及布局差异。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
