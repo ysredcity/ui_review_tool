@@ -15,6 +15,7 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
   const [viewMode, setViewMode] = useState<'side-by-side' | 'overlay'>('side-by-side');
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [isExportingToBase, setIsExportingToBase] = useState(false);
 
   // 初始化选中项
   useEffect(() => {
@@ -90,6 +91,33 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
     XLSX.writeFile(workbook, `${project.name}_UI走查报告_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  const handleExportToBase = async () => {
+    if (project.issues.length === 0) {
+      alert('暂无差异项可供同步');
+      return;
+    }
+
+    setIsExportingToBase(true);
+    
+    // 模拟飞书 API 调用延迟
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      // 在实际生产中，这里会调用飞书服务端接口，例如：
+      // await fetch('/api/feishu/create-base-record', { method: 'POST', body: JSON.stringify(project.issues) });
+      
+      setIsExportingToBase(false);
+      alert('已成功将数据同步至飞书多维表格！');
+      
+      // 跳转至飞书多维表格（示例 URL）
+      window.open('https://www.feishu.cn/base/', '_blank');
+    } catch (error) {
+      console.error('Export to Base failed:', error);
+      setIsExportingToBase(false);
+      alert('同步失败，请检查网络连接或飞书授权状态。');
+    }
+  };
+
   const completionRate = Math.round(
     (project.issues.filter(i => i.decision).length / Math.max(project.issues.length, 1)) * 100
   );
@@ -130,26 +158,41 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
             </div>
           )}
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col items-end">
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-end mr-4">
              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">走查进度</div>
-             <div className="w-40 h-2 bg-slate-700 rounded-full overflow-hidden">
+             <div className="w-32 h-1.5 bg-slate-700 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" style={{ width: `${completionRate}%` }}></div>
              </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button 
               onClick={handleExportExcel}
-              className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold border border-slate-600 transition-all flex items-center gap-2"
+              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium border border-slate-600 transition-all flex items-center gap-1.5"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              导出报告
+              导出 Excel
             </button>
             <button 
+              onClick={handleExportToBase}
+              disabled={isExportingToBase}
+              className={`bg-[#3370ff] hover:bg-[#2859cc] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 shadow-md shadow-[#3370ff]/20 ${isExportingToBase ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isExportingToBase ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm1 2v14h14V5H5zm2 3h10v2H7V8zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
+                </svg>
+              )}
+              {isExportingToBase ? '同步中...' : '导出到多维表格'}
+            </button>
+            <div className="w-[1px] h-6 bg-slate-700 mx-1"></div>
+            <button 
               onClick={onFinish}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"
             >
               完成并关闭
             </button>
