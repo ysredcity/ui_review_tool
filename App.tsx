@@ -1,9 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, ProjectStatus } from './types';
 import ProjectList from './components/ProjectList';
 import AuditWorkflow from './components/AuditWorkflow';
 import DifferenceAuditView from './components/DifferenceAuditView';
+
+const STORAGE_KEY = 'pixelguard_projects_v1';
 
 const MOCK_PROJECTS: Project[] = [
   {
@@ -24,9 +26,17 @@ const MOCK_PROJECTS: Project[] = [
 ];
 
 const App: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : MOCK_PROJECTS;
+  });
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'detail' | 'audit'>('list');
+
+  // 持久化存储
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+  }, [projects]);
 
   const activeProject = projects.find(p => p.id === activeProjectId);
 
@@ -50,6 +60,29 @@ const App: React.FC = () => {
     ));
   };
 
+  const handleDeleteProject = (id: string) => {
+    if (window.confirm('确定要删除这个项目吗？所有相关的走查记录和图片数据都将被永久移除。')) {
+      setProjects(prev => prev.filter(p => p.id !== id));
+      if (activeProjectId === id) {
+        setActiveProjectId(null);
+        setView('list');
+      }
+    }
+  };
+
+  const handleSelectProject = (id: string) => {
+    setActiveProjectId(id);
+    const project = projects.find(p => p.id === id);
+    if (project) {
+      // 如果已经有走查结果（无论是在进行中还是已完成），直接进入走查视图
+      if ((project.issues && project.issues.length > 0) || project.status === ProjectStatus.COMPLETED) {
+        setView('audit');
+      } else {
+        setView('detail');
+      }
+    }
+  };
+
   const navigateToList = () => {
     setActiveProjectId(null);
     setView('list');
@@ -61,7 +94,8 @@ const App: React.FC = () => {
       {view === 'list' && (
         <ProjectList 
           projects={projects} 
-          onSelectProject={(id) => { setActiveProjectId(id); setView('detail'); }}
+          onSelectProject={handleSelectProject}
+          onDeleteProject={handleDeleteProject}
           onCreateProject={handleCreateProject}
         />
       )}
@@ -98,7 +132,7 @@ const App: React.FC = () => {
         <DifferenceAuditView 
           project={activeProject}
           onUpdateIssues={(issues) => handleUpdateProject({ issues })}
-          onBack={() => setView('detail')}
+          onBack={navigateToList}
           onFinish={() => {
             handleUpdateProject({ status: ProjectStatus.COMPLETED });
             navigateToList();

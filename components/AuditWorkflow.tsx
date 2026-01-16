@@ -10,7 +10,15 @@ interface AuditWorkflowProps {
 }
 
 const AuditWorkflow: React.FC<AuditWorkflowProps> = ({ project, onUpdateProject, onStartAudit }) => {
-  const [step, setStep] = useState(1);
+  // 根据项目当前状态初始化步骤
+  const getInitialStep = () => {
+    if (project.issues && project.issues.length > 0) return 4;
+    if (project.designImage && project.devImage) return 3;
+    if (project.designImage) return 2;
+    return 1;
+  };
+
+  const [step, setStep] = useState(getInitialStep());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -156,6 +164,7 @@ const AuditWorkflow: React.FC<AuditWorkflowProps> = ({ project, onUpdateProject,
                 >
                   开始比对分析
                 </button>
+                <button onClick={() => setStep(2)} className="block mx-auto mt-2 text-slate-400 hover:text-slate-600 text-xs">重新上传截图</button>
               </div>
             )}
           </div>
@@ -170,12 +179,20 @@ const AuditWorkflow: React.FC<AuditWorkflowProps> = ({ project, onUpdateProject,
             </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-2">分析完成！</h2>
             <p className="text-slate-500 mb-8">AI 发现了 <span className="text-indigo-600 font-bold">{project.issues.length}</span> 处潜在差异。</p>
-            <button 
-              onClick={onStartAudit}
-              className="bg-indigo-600 text-white px-10 py-4 rounded-xl font-bold shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all"
-            >
-              进入走查视图
-            </button>
+            <div className="flex flex-col gap-3 items-center">
+              <button 
+                onClick={onStartAudit}
+                className="bg-indigo-600 text-white px-10 py-4 rounded-xl font-bold shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all"
+              >
+                进入走查视图
+              </button>
+              <button 
+                onClick={() => setStep(3)} 
+                className="text-slate-400 hover:text-indigo-600 text-sm font-medium"
+              >
+                重新运行分析
+              </button>
+            </div>
           </div>
         )}
       </div>
