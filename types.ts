@@ -35,6 +35,7 @@ export interface UIIssue {
   devValue?: string;
   decision?: AuditDecision;
   note?: string;
+  screenshot?: string; // 新增：问题区域截图
 }
 
 export interface Project {
