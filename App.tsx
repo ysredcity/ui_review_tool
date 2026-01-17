@@ -25,7 +25,7 @@ const App: React.FC = () => {
   };
 
   const resetToLanding = () => {
-    if (view === 'audit' && !window.confirm('确定要退出当前走查吗？未导出的数据将会丢失。')) {
+    if (view === 'audit' && !window.confirm('确定要返回首页吗？未导出的走查数据将会丢失。')) {
       return;
     }
     setCurrentAudit(null);
@@ -57,7 +57,7 @@ const App: React.FC = () => {
           <div className="mt-20 flex gap-12 grayscale opacity-40">
             <div className="flex flex-col items-center gap-2">
               <div className="text-xs font-bold uppercase tracking-widest text-slate-400">Powered By</div>
-              <div className="text-lg font-bold text-slate-900">Gemini 2.5 Flash</div>
+              <div className="text-lg font-bold text-slate-900">Gemini 3 Flash</div>
             </div>
           </div>
         </div>
@@ -88,12 +88,6 @@ const App: React.FC = () => {
           project={currentAudit}
           onUpdateIssues={(issues) => handleUpdateAudit({ issues })}
           onBack={resetToLanding}
-          onFinish={() => {
-            if(window.confirm('确认完成本次走查？请确保您已导出结果，退出后数据将不会保留。')) {
-              setView('landing');
-              setCurrentAudit(null);
-            }
-          }}
         />
       )}
     </div>

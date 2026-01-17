@@ -7,10 +7,9 @@ interface DifferenceAuditViewProps {
   project: Project;
   onUpdateIssues: (issues: UIIssue[]) => void;
   onBack: () => void;
-  onFinish: () => void;
 }
 
-const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUpdateIssues, onBack, onFinish }) => {
+const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUpdateIssues, onBack }) => {
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'side-by-side' | 'overlay'>('side-by-side');
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
@@ -99,7 +98,7 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
       {/* Header */}
       <header className="h-20 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-lg relative z-20">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-xl" title="退出并放弃">
+          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-xl" title="回到首页">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" strokeWidth={2.5}/></svg>
           </button>
           <div>
@@ -154,12 +153,6 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeWidth={2}/></svg>
               同步多维表格
-            </button>
-            <button 
-              onClick={onFinish}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl shadow-indigo-900/20 active:scale-95 transition-all"
-            >
-              完成并退出
             </button>
           </div>
         </div>
