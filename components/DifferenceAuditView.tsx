@@ -41,11 +41,7 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
   };
 
   const deleteIssue = (issueId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation(); 
-    }
-    
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     if (window.confirm('确定要删除这条差异记录吗？')) {
       const remainingIssues = project.issues.filter(i => i.id !== issueId);
       onUpdateIssues(remainingIssues);
@@ -68,37 +64,6 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
     setIsPanelCollapsed(false);
   };
 
-  const handleExportExcel = () => {
-    if (project.issues.length === 0) {
-      alert('暂无差异项可供导出');
-      return;
-    }
-
-    const data = project.issues.map((issue, index) => ({
-      '编号': index + 1,
-      '差异标题': issue.title,
-      '差异分类': issue.type,
-      '严重程度': issue.severity,
-      '走查决策': issue.decision || '待定',
-      '设计标准': issue.designValue || '-',
-      '实际实现': issue.devValue || '-',
-      '详细描述': issue.description,
-      '修改建议': issue.note || '-',
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "UI走查报告");
-    XLSX.writeFile(workbook, `${project.name}_报告.xlsx`);
-  };
-
-  const handleExportToBase = () => {
-    const confirmed = window.confirm('准备将走查数据同步至飞书多维表格 / Notion Base？');
-    if (confirmed) {
-      alert('数据同步指令已发送。同步完成后，您可以在对应的协作文档中查收结果。');
-    }
-  };
-
   const completionRate = Math.round(
     (project.issues.filter(i => i.decision).length / Math.max(project.issues.length, 1)) * 100
   );
@@ -108,345 +73,162 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
       {/* Header */}
       <header className="h-20 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-lg relative z-20">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-xl" title="回到首页">
+          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-xl">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" strokeWidth={2.5}/></svg>
           </button>
           <div>
-            <h1 className="text-white font-bold leading-none mb-1">{project.name}</h1>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700">
-                <button 
-                  onClick={() => setViewMode('side-by-side')}
-                  className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${viewMode === 'side-by-side' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-white'}`}
-                >
-                  左右对比
-                </button>
-                <button 
-                  onClick={() => setViewMode('overlay')}
-                  className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${viewMode === 'overlay' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-white'}`}
-                >
-                  重叠模式
-                </button>
+            <h1 className="text-white font-bold text-sm md:text-base">{project.name}</h1>
+            <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex bg-slate-900 rounded-lg p-0.5 border border-slate-700">
+                <button onClick={() => setViewMode('side-by-side')} className={`px-2 py-1 text-[9px] font-bold rounded ${viewMode === 'side-by-side' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>对比模式</button>
+                <button onClick={() => setViewMode('overlay')} className={`px-2 py-1 text-[9px] font-bold rounded ${viewMode === 'overlay' ? 'bg-indigo-600 text-white' : 'text-slate-500'}`}>叠层模式</button>
               </div>
-              {viewMode === 'overlay' && (
-                <div className="flex items-center gap-2 ml-1">
-                  <input 
-                    type="range" min="0" max="1" step="0.1" 
-                    value={overlayOpacity} 
-                    onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
-                    className="w-20 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="hidden xl:flex flex-col items-end mr-4">
+          <div className="hidden lg:flex flex-col items-end mr-4">
              <div className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-1.5">审核完成度 {completionRate}%</div>
              <div className="w-48 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" style={{ width: `${completionRate}%` }}></div>
+                <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${completionRate}%` }}></div>
              </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleExportExcel}
-              className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold border border-slate-600 transition-all flex items-center gap-2 active:scale-95"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2}/></svg>
-              导出 Excel
-            </button>
-            <button 
-              onClick={handleExportToBase}
-              className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-4 py-2.5 rounded-xl text-sm font-bold border border-blue-600/30 transition-all flex items-center gap-2 active:scale-95"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeWidth={2}/></svg>
-              同步多维表格
-            </button>
-          </div>
+          <button onClick={addIssue} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg shadow-indigo-900/20 active:scale-95 transition-all">
+            标记新差异
+          </button>
         </div>
       </header>
 
-      {/* Top Section: Images View */}
-      <div className="flex-1 bg-slate-950 flex overflow-auto p-8 gap-8 items-start justify-center relative scrollbar-hide">
+      {/* Main Preview Area */}
+      <div className="flex-1 bg-slate-950 flex overflow-auto p-4 md:p-8 gap-4 md:gap-10 items-start justify-center relative scrollbar-hide">
         {viewMode === 'side-by-side' ? (
-          <div className="flex gap-10 min-w-max">
-            <div className="flex flex-col items-center">
-              <div className="text-slate-500 text-[10px] font-black uppercase mb-4 tracking-[0.2em] px-4 py-1.5 bg-slate-900 rounded-full border border-slate-800 shadow-inner">Design Standard</div>
-              <div className="bg-white rounded-2xl shadow-2xl p-4 ring-1 ring-white/10">
-                <img src={project.designImage} className="max-w-[42vw] h-auto block rounded-lg" alt="设计" />
-              </div>
+          <div className="flex flex-col md:flex-row gap-8 min-w-max">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 ring-1 ring-white/10">
+              <div className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest text-center">Design Standard</div>
+              <img src={project.designImage} className="max-w-[80vw] md:max-w-[40vw] h-auto rounded" alt="设计稿" />
             </div>
-            <div className="flex flex-col items-center">
-              <div className="text-slate-500 text-[10px] font-black uppercase mb-4 tracking-[0.2em] px-4 py-1.5 bg-slate-900 rounded-full border border-slate-800 shadow-inner">Actual Dev</div>
-              <div className="bg-white rounded-2xl shadow-2xl p-4 ring-1 ring-white/10">
-                <img src={project.devImage} className="max-w-[42vw] h-auto block rounded-lg" alt="实现" />
-              </div>
+            <div className="bg-white rounded-2xl shadow-2xl p-4 ring-1 ring-white/10">
+              <div className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest text-center">Development Implementation</div>
+              <img src={project.devImage} className="max-w-[80vw] md:max-w-[40vw] h-auto rounded" alt="开发稿" />
             </div>
           </div>
         ) : (
           <div className="relative bg-white rounded-2xl p-4 shadow-2xl mx-auto ring-1 ring-white/10">
-            <img src={project.designImage} className="max-w-[75vw] h-auto block rounded-lg" alt="设计底图" />
-            <img 
-              src={project.devImage} 
-              className="absolute top-4 left-4 w-[calc(100%-32px)] h-auto block mix-blend-difference pointer-events-none rounded-lg"
-              style={{ opacity: overlayOpacity }}
-              alt="开发覆盖图"
-            />
-            <div className="absolute top-8 right-8 bg-indigo-600 text-white text-[10px] px-4 py-2 rounded-full font-black shadow-2xl border border-indigo-400/30 uppercase tracking-widest">
-              Difference Engine Active
-            </div>
+            <img src={project.designImage} className="max-w-[85vw] md:max-w-[75vw] h-auto rounded" alt="底图" />
+            <img src={project.devImage} className="absolute top-4 left-4 w-[calc(100%-32px)] h-auto block mix-blend-difference rounded" style={{ opacity: overlayOpacity }} alt="叠层" />
           </div>
         )}
       </div>
 
-      {/* Bottom Section: Audit Panel */}
-      <div 
-        className={`bg-white border-t border-slate-200 flex flex-col shrink-0 shadow-[0_-12px_40px_rgba(0,0,0,0.15)] z-10 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden ${
-          isPanelCollapsed ? 'h-16' : 'h-[440px]'
-        }`}
-      >
-        <div className="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-8">
-            <h2 className="font-black text-slate-900 text-lg flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              差异分析报告 <span className="ml-1 text-slate-300 font-mono text-sm">{project.issues.length} Items</span>
-            </h2>
-          </div>
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={addIssue}
-              className="bg-indigo-600 text-white hover:bg-indigo-700 px-5 py-2 rounded-xl transition-all flex items-center gap-2 text-sm font-bold shadow-lg shadow-indigo-100 active:scale-95"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 4v16m8-8H4" strokeWidth={3}/></svg>
-              标记新差异
-            </button>
-            <button 
-              onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
-              className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-xl transition-all"
-            >
-              <svg 
-                className={`w-6 h-6 transition-transform duration-500 ${isPanelCollapsed ? 'rotate-180' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
+      {/* Bottom Panel */}
+      <div className={`bg-white border-t border-slate-200 flex flex-col shrink-0 z-10 transition-all duration-500 ${isPanelCollapsed ? 'h-16' : 'h-[360px] md:h-[450px]'}`}>
+        <div className="h-16 border-b border-slate-100 px-6 flex items-center justify-between shrink-0">
+          <h2 className="font-black text-slate-900 text-sm md:text-base flex items-center gap-2">
+            差异清单 <span className="text-indigo-600 font-mono text-xs">{project.issues.length} Items</span>
+          </h2>
+          <button onClick={() => setIsPanelCollapsed(!isPanelCollapsed)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg">
+            <svg className={`w-5 h-5 transition-transform ${isPanelCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 9l-7 7-7-7" strokeWidth={2.5}/></svg>
+          </button>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          {/* Issue List Sidebar */}
-          <div className="w-96 border-r border-slate-100 flex flex-col bg-slate-50 overflow-hidden">
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-              {project.issues.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-300 p-8 text-center">
-                  <svg className="w-12 h-12 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth={2}/></svg>
-                  <p className="text-xs font-bold uppercase tracking-widest">No Issues Found</p>
+          {/* List */}
+          <div className="w-72 md:w-96 border-r border-slate-100 overflow-y-auto bg-slate-50">
+            {project.issues.map(issue => (
+              <div
+                key={issue.id}
+                onClick={() => setSelectedIssueId(issue.id)}
+                className={`p-4 flex gap-4 cursor-pointer transition-all border-l-4 ${selectedIssueId === issue.id ? 'bg-white border-indigo-600 shadow-sm' : 'border-transparent hover:bg-slate-100'}`}
+              >
+                {/* 列表中的缩略图 */}
+                <div className="w-12 h-12 md:w-16 md:h-16 shrink-0 rounded-lg border border-slate-200 bg-slate-200 bg-cover bg-center overflow-hidden flex items-center justify-center" style={issue.screenshot ? { backgroundImage: `url(${issue.screenshot})` } : {}}>
+                  {!issue.screenshot && <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" strokeWidth={1.5}/></svg>}
                 </div>
-              ) : (
-                project.issues.map((issue) => (
-                  <div
-                    key={issue.id}
-                    onClick={() => {
-                      setSelectedIssueId(issue.id);
-                      if (isPanelCollapsed) setIsPanelCollapsed(false);
-                    }}
-                    className={`group w-full text-left p-5 transition-all relative cursor-pointer flex gap-4 ${
-                      selectedIssueId === issue.id 
-                        ? 'bg-white border-l-[6px] border-l-indigo-600 shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]' 
-                        : 'hover:bg-slate-100 border-l-[6px] border-l-transparent'
-                    }`}
-                  >
-                    {/* Thumbnail in list */}
-                    <div className="w-16 h-16 shrink-0 rounded-lg bg-slate-200 border border-slate-200 overflow-hidden flex items-center justify-center bg-cover bg-center" style={issue.screenshot ? { backgroundImage: `url(${issue.screenshot})` } : {}}>
-                      {!issue.screenshot && <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" strokeWidth={1.5}/></svg>}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-[0.1em] ${
-                          issue.severity === IssueSeverity.HIGH ? 'bg-red-100 text-red-600 border border-red-200' : 
-                          issue.severity === IssueSeverity.MEDIUM ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-blue-100 text-blue-600 border border-blue-200'
-                        }`}>
-                          {issue.type}
-                        </span>
-                        <button 
-                          onClick={(e) => deleteIssue(issue.id, e)}
-                          className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2}/></svg>
-                        </button>
-                      </div>
-                      <h3 className={`font-bold text-sm leading-snug truncate ${selectedIssueId === issue.id ? 'text-indigo-600' : 'text-slate-800'}`}>{issue.title}</h3>
-                      <div className="mt-1 flex items-center justify-between">
-                        <div className="text-[10px] text-slate-400">{issue.severity}</div>
-                        {issue.decision && (
-                          <div className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-tighter">
-                            {issue.decision}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xs md:text-sm font-bold truncate text-slate-800">{issue.title}</h3>
+                  <div className="flex gap-2 mt-1">
+                    <span className="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase font-black">{issue.type}</span>
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded uppercase font-black ${issue.severity === IssueSeverity.HIGH ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>{issue.severity}</span>
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Issue Detail Panel */}
-          <div className="flex-1 bg-white overflow-y-auto scroll-smooth">
+          {/* Details */}
+          <div className="flex-1 overflow-y-auto p-6 md:p-10 bg-white">
             {selectedIssue ? (
-              <div className="p-10 max-w-4xl">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                  <div className="space-y-8">
-                    {/* Screenshot Upload / Preview Area */}
-                    <div>
-                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">问题区域截图 (Screenshot)</label>
-                      <div className="relative group/img">
-                        <div 
-                          onClick={() => fileInputRef.current?.click()}
-                          className={`w-full aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden relative ${
-                            selectedIssue.screenshot ? 'border-indigo-200 bg-slate-50' : 'border-slate-200 hover:border-indigo-400 bg-slate-50 hover:bg-indigo-50/30'
-                          }`}
-                        >
-                          {selectedIssue.screenshot ? (
-                            <>
-                              <img src={selectedIssue.screenshot} className="w-full h-full object-contain" alt="问题截图" />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                                <span className="text-white text-xs font-bold px-4 py-2 bg-indigo-600 rounded-lg shadow-xl">更换图片</span>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-10 h-10 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" strokeWidth={1.5}/></svg>
-                              <span className="text-xs font-bold text-slate-400">点击上传局部截图</span>
-                            </>
-                          )}
+              <div className="max-w-3xl space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  {/* Screenshot Field */}
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">差异点截图 (局部)</label>
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="aspect-video w-full rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/20 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center relative"
+                    >
+                      {selectedIssue.screenshot ? (
+                        <img src={selectedIssue.screenshot} className="w-full h-full object-contain" alt="差异截图" />
+                      ) : (
+                        <div className="text-center p-4">
+                          <svg className="w-8 h-8 text-slate-300 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" strokeWidth={2}/></svg>
+                          <span className="text-[10px] font-bold text-slate-400">点击上传局部截图</span>
                         </div>
-                        {selectedIssue.screenshot && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); updateIssue(selectedIssue.id, { screenshot: undefined }); }}
-                            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" strokeWidth={3}/></svg>
-                          </button>
-                        )}
-                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleScreenshotUpload} />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">问题标题 (Subject)</label>
-                      <input 
-                        className="w-full border-b-2 border-slate-100 focus:border-indigo-600 py-3 text-lg font-bold text-slate-800 outline-none transition-all placeholder:text-slate-200"
-                        value={selectedIssue.title}
-                        onChange={(e) => updateIssue(selectedIssue.id, { title: e.target.value })}
-                        placeholder="输入简短描述..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">设计预期</label>
-                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 text-xs font-bold text-indigo-700 min-h-[60px] flex items-center shadow-sm">
-                          {selectedIssue.designValue || 'AI 尚未识别具体数值'}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">实际现状</label>
-                        <div className="bg-red-50/50 p-4 rounded-2xl border border-red-100 text-xs font-bold text-red-700 min-h-[60px] flex items-center shadow-sm">
-                          {selectedIssue.devValue || 'AI 尚未识别具体数值'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">差异化说明</label>
-                      <textarea 
-                        rows={4}
-                        className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl p-5 text-sm font-medium text-slate-600 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all resize-none leading-relaxed"
-                        value={selectedIssue.description}
-                        onChange={(e) => updateIssue(selectedIssue.id, { description: e.target.value })}
-                        placeholder="在此补充更详尽的走查发现..."
-                      />
+                      )}
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleScreenshotUpload} />
                     </div>
                   </div>
 
-                  <div className="space-y-8">
+                  <div className="space-y-6">
                     <div>
-                      <label className="text-[11px] font-black text-slate-400 uppercase mb-4 block tracking-widest">走查结论 (Decision)</label>
-                      <div className="grid grid-cols-1 gap-3">
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2">差异标题</label>
+                      <input 
+                        className="w-full text-base md:text-lg font-bold text-slate-800 border-b-2 border-slate-100 focus:border-indigo-600 outline-none pb-2 transition-all"
+                        value={selectedIssue.title}
+                        onChange={e => updateIssue(selectedIssue.id, { title: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2">走查结论</label>
+                      <div className="flex flex-wrap gap-2">
                         {Object.values(AuditDecision).map(d => (
-                          <button
-                            key={d}
+                          <button 
+                            key={d} 
                             onClick={() => updateIssue(selectedIssue.id, { decision: d })}
-                            className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 font-bold transition-all active:scale-95 ${
-                              selectedIssue.decision === d 
-                                ? 'bg-slate-900 text-white border-slate-900 shadow-xl' 
-                                : 'bg-white text-slate-500 border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30'
-                            }`}
+                            className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all border-2 ${selectedIssue.decision === d ? 'bg-slate-900 border-slate-900 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-500 hover:border-indigo-200'}`}
                           >
-                            <span className="text-xs uppercase tracking-widest">{d}</span>
-                            {selectedIssue.decision === d && (
-                              <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                            )}
+                            {d}
                           </button>
                         ))}
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-widest">问题分类</label>
-                        <select 
-                          className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
-                          value={selectedIssue.type}
-                          onChange={(e) => updateIssue(selectedIssue.id, { type: e.target.value as IssueType })}
-                        >
-                          {Object.values(IssueType).map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-widest">优先级</label>
-                        <select 
-                          className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
-                          value={selectedIssue.severity}
-                          onChange={(e) => updateIssue(selectedIssue.id, { severity: e.target.value as IssueSeverity })}
-                        >
-                          {Object.values(IssueSeverity).map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">修订建议 (Optional)</label>
-                      <input 
-                        placeholder="输入建议的修改路径或技术参考..."
-                        className="w-full bg-slate-50/50 border border-slate-100 rounded-xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
-                        value={selectedIssue.note || ''}
-                        onChange={(e) => updateIssue(selectedIssue.id, { note: e.target.value })}
-                      />
-                    </div>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                   <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                      <div className="text-[10px] font-black text-indigo-400 uppercase mb-2">设计预期</div>
+                      <div className="text-xs font-bold text-indigo-900">{selectedIssue.designValue || '-'}</div>
+                   </div>
+                   <div className="p-4 bg-red-50/50 rounded-2xl border border-red-100">
+                      <div className="text-[10px] font-black text-red-400 uppercase mb-2">实际实现</div>
+                      <div className="text-xs font-bold text-red-900">{selectedIssue.devValue || '-'}</div>
+                   </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-2">详细说明</label>
+                  <textarea 
+                    rows={4}
+                    className="w-full bg-slate-50 p-4 rounded-xl text-xs font-medium text-slate-600 outline-none focus:ring-2 focus:ring-indigo-600/10 border border-transparent focus:border-indigo-600 transition-all"
+                    value={selectedIssue.description}
+                    onChange={e => updateIssue(selectedIssue.id, { description: e.target.value })}
+                  />
                 </div>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-300 flex-col gap-6 p-20 text-center">
-                <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
-                  <svg className="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth={1.5}/></svg>
-                </div>
-                <div>
-                  <h4 className="text-slate-900 font-black text-lg mb-2">选择一个走查项</h4>
-                  <p className="text-sm font-medium text-slate-400 max-w-xs">请从左侧列表选择 AI 识别的差异点，进行细节核对与决策。</p>
-                </div>
-              </div>
+              <div className="h-full flex items-center justify-center text-slate-300 font-bold uppercase tracking-widest text-xs">请选择一个差异项</div>
             )}
           </div>
         </div>

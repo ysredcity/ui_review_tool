@@ -2,8 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { IssueType, IssueSeverity } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const responseSchema = {
   type: Type.ARRAY,
   items: {
@@ -20,47 +18,64 @@ const responseSchema = {
   }
 };
 
+const parseBase64 = (base64String: string) => {
+  const matches = base64String.match(/^data:([^;]+);base64,(.+)$/);
+  if (!matches || matches.length !== 3) {
+    return { mimeType: "image/png", data: base64String.includes(',') ? base64String.split(',')[1] : base64String };
+  }
+  return { mimeType: matches[1], data: matches[2] };
+};
+
 export const analyzeUIComparison = async (designBase64: string, devBase64: string) => {
-  const model = "gemini-3-flash-preview";
+  // 根据平台规范，必须使用 process.env.API_KEY
+  const apiKey = process.env.API_KEY;
   
+  if (!apiKey) {
+    console.error("Environment Variable API_KEY is missing.");
+    throw new Error("检测到 API_KEY 缺失。请在部署平台（如 Vercel）的环境变量中添加名为 'API_KEY' 的变量。");
+  }
+
+  // 每次调用时重新实例化以确保获取最新的环境变量
+  const ai = new GoogleGenAI({ apiKey });
+  const model = 'gemini-3-flash-preview';
+  
+  const designInfo = parseBase64(designBase64);
+  const devInfo = parseBase64(devBase64);
+
   const prompt = `
-    你是一位资深的 UI/UX 视觉走查工程师（QA）。
-    请对比以下两张图片：
-    1. 图片 1: UI 设计稿（原始设计标准）
-    2. 图片 2: 开发实现的页面截图（当前现状）
+    你是一位资深的 UI/UX 视觉走查工程师。
+    对比以下两张图：
+    1. 图片 1: 设计标准稿
+    2. 图片 2: 开发实现截图
     
-    找出所有视觉上的不一致，包括但不限于：
-    - 间距与边距（错误的 padding、gap 或对齐）
-    - 文字排版（错误的字号、字重、行高或颜色）
-    - 颜色与渐变（品牌色不符或阴影效果不对）
-    - 组件（图标缺失、圆角错误、投影不符）
-    - 布局（元素错位、未居中、比例不对）
-    
-    请务必精确。对于每个问题，尽可能详细说明设计稿是怎么要求的，而开发是怎么实现的。
-    请使用中文返回结果。
+    请找出两者之间的视觉差异，包含间距、文字、颜色、布局等。
+    请详细描述每处差异，并给出具体的数值对比。
+    请使用中文返回 JSON 格式结果。
   `;
 
-  const response = await ai.models.generateContent({
-    model,
-    contents: {
-      parts: [
-        { text: prompt },
-        { inlineData: { mimeType: "image/png", data: designBase64.split(',')[1] } },
-        { inlineData: { mimeType: "image/png", data: devBase64.split(',')[1] } },
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: responseSchema,
-      temperature: 0.1,
-    },
-  });
-
   try {
-    const jsonStr = response.text.trim();
-    return JSON.parse(jsonStr);
-  } catch (error) {
-    console.error("Failed to parse AI response:", error);
-    throw new Error("AI 分析生成数据失败，请重试。");
+    const response = await ai.models.generateContent({
+      model,
+      contents: {
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: designInfo.mimeType, data: designInfo.data } },
+          { inlineData: { mimeType: devInfo.mimeType, data: devInfo.data } },
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: responseSchema,
+        temperature: 0.1,
+      },
+    });
+
+    const resultText = response.text;
+    if (!resultText) throw new Error("AI 分析结果为空");
+    
+    return JSON.parse(resultText);
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    throw new Error(error.message || "AI 比对请求失败");
   }
 };
