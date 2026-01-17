@@ -15,9 +15,7 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
   const [viewMode, setViewMode] = useState<'side-by-side' | 'overlay'>('side-by-side');
   const [overlayOpacity, setOverlayOpacity] = useState(0.5);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
-  const [isExportingToBase, setIsExportingToBase] = useState(false);
 
-  // 初始化选中项
   useEffect(() => {
     if (!selectedIssueId && project.issues.length > 0) {
       setSelectedIssueId(project.issues[0].id);
@@ -39,17 +37,9 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
     
     if (window.confirm('确定要删除这条差异记录吗？')) {
       const remainingIssues = project.issues.filter(i => i.id !== issueId);
-      
-      // 更新外部状态
       onUpdateIssues(remainingIssues);
-      
-      // 如果删除的是当前选中的项，则切换到另一个项
       if (selectedIssueId === issueId) {
-        if (remainingIssues.length > 0) {
-          setSelectedIssueId(remainingIssues[0].id);
-        } else {
-          setSelectedIssueId(null);
-        }
+        setSelectedIssueId(remainingIssues.length > 0 ? remainingIssues[0].id : null);
       }
     }
   };
@@ -88,33 +78,15 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "UI走查报告");
-    XLSX.writeFile(workbook, `${project.name}_UI走查报告_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(workbook, `${project.name}_报告.xlsx`);
   };
 
-  const handleExportToBase = async () => {
-    if (project.issues.length === 0) {
-      alert('暂无差异项可供同步');
-      return;
-    }
-
-    setIsExportingToBase(true);
-    
-    // 模拟飞书 API 调用延迟
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    try {
-      // 在实际生产中，这里会调用飞书服务端接口，例如：
-      // await fetch('/api/feishu/create-base-record', { method: 'POST', body: JSON.stringify(project.issues) });
-      
-      setIsExportingToBase(false);
-      alert('已成功将数据同步至飞书多维表格！');
-      
-      // 跳转至飞书多维表格（示例 URL）
-      window.open('https://www.feishu.cn/base/', '_blank');
-    } catch (error) {
-      console.error('Export to Base failed:', error);
-      setIsExportingToBase(false);
-      alert('同步失败，请检查网络连接或飞书授权状态。');
+  const handleExportToBase = () => {
+    // 模拟导出到多维表格逻辑
+    const confirmed = window.confirm('准备将走查数据同步至飞书多维表格 / Notion Base？');
+    if (confirmed) {
+      alert('数据同步指令已发送。同步完成后，您可以在对应的协作文档中查收结果。');
+      // 实际应用中这里会调用后端 Webhook 或飞书/Notion API
     }
   };
 
@@ -125,76 +97,69 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
   return (
     <div className="fixed inset-0 bg-slate-900 flex flex-col z-50 overflow-hidden font-['Noto_Sans_SC']">
       {/* Header */}
-      <header className="h-16 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-lg relative z-20">
+      <header className="h-20 bg-slate-800 border-b border-slate-700 flex items-center justify-between px-6 shrink-0 shadow-lg relative z-20">
         <div className="flex items-center gap-4">
-          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-lg" title="回到项目列表">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" strokeWidth={2}/></svg>
+          <button onClick={onBack} className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-700 rounded-xl" title="退出并放弃">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M15 19l-7-7 7-7" strokeWidth={2.5}/></svg>
           </button>
-          <h1 className="text-white font-semibold">{project.name} - UI 走查</h1>
-          <div className="h-6 w-[1px] bg-slate-700 mx-2"></div>
-          <div className="flex items-center bg-slate-900 rounded-lg p-1">
-            <button 
-              onClick={() => setViewMode('side-by-side')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'side-by-side' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              左右对比
-            </button>
-            <button 
-              onClick={() => setViewMode('overlay')}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${viewMode === 'overlay' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-            >
-              重叠对比
-            </button>
-          </div>
-          {viewMode === 'overlay' && (
-            <div className="flex items-center gap-2 ml-2">
-              <span className="text-[10px] text-slate-500 font-bold uppercase">透明度</span>
-              <input 
-                type="range" min="0" max="1" step="0.1" 
-                value={overlayOpacity} 
-                onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
-                className="w-24 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-              />
+          <div>
+            <h1 className="text-white font-bold leading-none mb-1">{project.name}</h1>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700">
+                <button 
+                  onClick={() => setViewMode('side-by-side')}
+                  className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${viewMode === 'side-by-side' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-white'}`}
+                >
+                  左右对比
+                </button>
+                <button 
+                  onClick={() => setViewMode('overlay')}
+                  className={`px-3 py-1 text-[10px] font-bold uppercase rounded-md transition-all ${viewMode === 'overlay' ? 'bg-indigo-600 text-white shadow' : 'text-slate-500 hover:text-white'}`}
+                >
+                  重叠模式
+                </button>
+              </div>
+              {viewMode === 'overlay' && (
+                <div className="flex items-center gap-2 ml-1">
+                  <input 
+                    type="range" min="0" max="1" step="0.1" 
+                    value={overlayOpacity} 
+                    onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                    className="w-20 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
+        
         <div className="flex items-center gap-4">
-          <div className="flex flex-col items-end mr-4">
-             <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">走查进度</div>
-             <div className="w-32 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+          <div className="hidden xl:flex flex-col items-end mr-4">
+             <div className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-1.5">审核完成度 {completionRate}%</div>
+             <div className="w-48 h-1.5 bg-slate-700 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" style={{ width: `${completionRate}%` }}></div>
              </div>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={handleExportExcel}
-              className="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium border border-slate-600 transition-all flex items-center gap-1.5"
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold border border-slate-600 transition-all flex items-center gap-2 active:scale-95"
             >
-              <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeWidth={2}/></svg>
               导出 Excel
             </button>
             <button 
               onClick={handleExportToBase}
-              disabled={isExportingToBase}
-              className={`bg-[#3370ff] hover:bg-[#2859cc] text-white px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 shadow-md shadow-[#3370ff]/20 ${isExportingToBase ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 px-4 py-2.5 rounded-xl text-sm font-bold border border-blue-600/30 transition-all flex items-center gap-2 active:scale-95"
             >
-              {isExportingToBase ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              ) : (
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm1 2v14h14V5H5zm2 3h10v2H7V8zm0 4h10v2H7v-2zm0 4h7v2H7v-2z" />
-                </svg>
-              )}
-              {isExportingToBase ? '同步中...' : '导出到多维表格'}
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeWidth={2}/></svg>
+              同步多维表格
             </button>
-            <div className="w-[1px] h-6 bg-slate-700 mx-1"></div>
             <button 
               onClick={onFinish}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-xl shadow-indigo-900/20 active:scale-95 transition-all"
             >
-              完成并关闭
+              完成并退出
             </button>
           </div>
         </div>
@@ -203,31 +168,31 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
       {/* Top Section: Images View */}
       <div className="flex-1 bg-slate-950 flex overflow-auto p-8 gap-8 items-start justify-center relative scrollbar-hide">
         {viewMode === 'side-by-side' ? (
-          <div className="flex gap-8 min-w-max">
+          <div className="flex gap-10 min-w-max">
             <div className="flex flex-col items-center">
-              <div className="text-slate-500 text-[10px] font-bold uppercase mb-4 tracking-widest px-3 py-1 bg-slate-900 rounded-full border border-slate-800">设计稿 (Source)</div>
-              <div className="bg-white rounded-lg shadow-2xl p-4 overflow-hidden">
-                <img src={project.designImage} className="max-w-[45vw] h-auto block" alt="设计" />
+              <div className="text-slate-500 text-[10px] font-black uppercase mb-4 tracking-[0.2em] px-4 py-1.5 bg-slate-900 rounded-full border border-slate-800 shadow-inner">Design Standard</div>
+              <div className="bg-white rounded-2xl shadow-2xl p-4 ring-1 ring-white/10">
+                <img src={project.designImage} className="max-w-[42vw] h-auto block rounded-lg" alt="设计" />
               </div>
             </div>
             <div className="flex flex-col items-center">
-              <div className="text-slate-500 text-[10px] font-bold uppercase mb-4 tracking-widest px-3 py-1 bg-slate-900 rounded-full border border-slate-800">开发截图 (Actual)</div>
-              <div className="bg-white rounded-lg shadow-2xl p-4 overflow-hidden">
-                <img src={project.devImage} className="max-w-[45vw] h-auto block" alt="实现" />
+              <div className="text-slate-500 text-[10px] font-black uppercase mb-4 tracking-[0.2em] px-4 py-1.5 bg-slate-900 rounded-full border border-slate-800 shadow-inner">Actual Dev</div>
+              <div className="bg-white rounded-2xl shadow-2xl p-4 ring-1 ring-white/10">
+                <img src={project.devImage} className="max-w-[42vw] h-auto block rounded-lg" alt="实现" />
               </div>
             </div>
           </div>
         ) : (
-          <div className="relative bg-white rounded-lg p-4 shadow-2xl mx-auto">
-            <img src={project.designImage} className="max-w-[80vw] h-auto block" alt="设计底图" />
+          <div className="relative bg-white rounded-2xl p-4 shadow-2xl mx-auto ring-1 ring-white/10">
+            <img src={project.designImage} className="max-w-[75vw] h-auto block rounded-lg" alt="设计底图" />
             <img 
               src={project.devImage} 
-              className="absolute top-4 left-4 w-[calc(100%-32px)] h-auto block mix-blend-difference pointer-events-none"
+              className="absolute top-4 left-4 w-[calc(100%-32px)] h-auto block mix-blend-difference pointer-events-none rounded-lg"
               style={{ opacity: overlayOpacity }}
               alt="开发覆盖图"
             />
-            <div className="absolute top-8 right-8 bg-indigo-600 text-white text-[10px] px-3 py-1.5 rounded-full font-bold shadow-lg border border-indigo-400/30">
-              差值模式
+            <div className="absolute top-8 right-8 bg-indigo-600 text-white text-[10px] px-4 py-2 rounded-full font-black shadow-2xl border border-indigo-400/30 uppercase tracking-widest">
+              Difference Engine Active
             </div>
           </div>
         )}
@@ -235,60 +200,60 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
 
       {/* Bottom Section: Audit Panel */}
       <div 
-        className={`bg-white border-t border-slate-200 flex flex-col shrink-0 shadow-[0_-8px_30px_rgba(0,0,0,0.15)] z-10 transition-all duration-300 ease-in-out overflow-hidden ${
-          isPanelCollapsed ? 'h-14' : 'h-[400px]'
+        className={`bg-white border-t border-slate-200 flex flex-col shrink-0 shadow-[0_-12px_40px_rgba(0,0,0,0.15)] z-10 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden ${
+          isPanelCollapsed ? 'h-16' : 'h-[440px]'
         }`}
       >
-        {/* Panel Toolbar / Header */}
-        <div className="h-14 bg-white border-b border-slate-100 px-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-6">
-            <h2 className="font-bold text-slate-800 flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              差异项概览 <span className="ml-1 px-1.5 py-0.5 bg-slate-100 rounded-md text-xs font-mono">{project.issues.length}</span>
+        <div className="h-16 bg-white border-b border-slate-100 px-6 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-8">
+            <h2 className="font-black text-slate-900 text-lg flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              差异分析报告 <span className="ml-1 text-slate-300 font-mono text-sm">{project.issues.length} Items</span>
             </h2>
             {isPanelCollapsed && selectedIssue && (
-               <div className="hidden md:flex items-center gap-3 animate-fade-in">
-                  <span className="text-slate-300 text-xs">|</span>
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase tracking-wider">{selectedIssue.type}</span>
-                  <span className="text-sm text-slate-600 font-medium truncate max-w-[300px]">{selectedIssue.title}</span>
+               <div className="hidden lg:flex items-center gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+                  <div className="h-4 w-px bg-slate-200"></div>
+                  <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-widest">{selectedIssue.type}</span>
+                  <span className="text-sm text-slate-600 font-bold truncate max-w-[400px]">{selectedIssue.title}</span>
                </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button 
               onClick={addIssue}
-              className="bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-bold shadow-sm active:scale-95"
+              className="bg-indigo-600 text-white hover:bg-indigo-700 px-5 py-2 rounded-xl transition-all flex items-center gap-2 text-sm font-bold shadow-lg shadow-indigo-100 active:scale-95"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 4v16m8-8H4" strokeWidth={2.5}/></svg>
-              手动标记
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 4v16m8-8H4" strokeWidth={3}/></svg>
+              标记新差异
             </button>
-            <div className="w-[1px] h-6 bg-slate-200 mx-1"></div>
             <button 
               onClick={() => setIsPanelCollapsed(!isPanelCollapsed)}
-              className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-2 rounded-lg transition-all"
-              title={isPanelCollapsed ? "展开面板" : "收起面板"}
+              className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-xl transition-all"
             >
               <svg 
-                className={`w-6 h-6 transition-transform duration-300 ${isPanelCollapsed ? 'rotate-180' : ''}`} 
+                className={`w-6 h-6 transition-transform duration-500 ${isPanelCollapsed ? 'rotate-180' : ''}`} 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
           </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          
-          {/* Bottom-Left: Discrepancy List Navigation */}
-          <div className="w-80 border-r border-slate-100 flex flex-col bg-slate-50 overflow-hidden">
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-200/50">
+          <div className="w-96 border-r border-slate-100 flex flex-col bg-slate-50 overflow-hidden">
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
               {project.issues.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-sm">暂无差异点</div>
+                <div className="flex flex-col items-center justify-center h-full text-slate-300 p-8 text-center">
+                  <svg className="w-12 h-12 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" strokeWidth={2}/></svg>
+                  <p className="text-xs font-bold uppercase tracking-widest">No Issues Found</p>
+                </div>
               ) : (
                 project.issues.map((issue) => (
                   <div
@@ -297,153 +262,143 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
                       setSelectedIssueId(issue.id);
                       if (isPanelCollapsed) setIsPanelCollapsed(false);
                     }}
-                    className={`group w-full text-left p-4 transition-all relative cursor-pointer ${
+                    className={`group w-full text-left p-5 transition-all relative cursor-pointer ${
                       selectedIssueId === issue.id 
-                        ? 'bg-white border-l-4 border-l-indigo-600 shadow-sm' 
-                        : 'hover:bg-slate-100 border-l-4 border-l-transparent'
+                        ? 'bg-white border-l-[6px] border-l-indigo-600 shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]' 
+                        : 'hover:bg-slate-100 border-l-[6px] border-l-transparent'
                     }`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide ${
-                        issue.severity === IssueSeverity.HIGH ? 'bg-red-100 text-red-600' : 
-                        issue.severity === IssueSeverity.MEDIUM ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-[0.1em] ${
+                        issue.severity === IssueSeverity.HIGH ? 'bg-red-100 text-red-600 border border-red-200' : 
+                        issue.severity === IssueSeverity.MEDIUM ? 'bg-amber-100 text-amber-600 border border-amber-200' : 'bg-blue-100 text-blue-600 border border-blue-200'
                       }`}>
                         {issue.type} · {issue.severity}
                       </span>
                       <button 
                         onClick={(e) => deleteIssue(issue.id, e)}
-                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all p-1 rounded-md border border-transparent hover:border-red-100"
-                        title="快捷删除"
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2}/></svg>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2}/></svg>
                       </button>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className={`font-semibold text-sm truncate flex-1 ${selectedIssueId === issue.id ? 'text-indigo-600' : 'text-slate-800'}`}>{issue.title}</h3>
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className={`font-bold text-sm leading-snug flex-1 ${selectedIssueId === issue.id ? 'text-indigo-600' : 'text-slate-800'}`}>{issue.title}</h3>
                       {issue.decision && (
-                        <div className="flex items-center gap-1 text-[8px] font-bold text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-100 shrink-0">
+                        <div className="flex items-center gap-1 text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 shrink-0 uppercase tracking-tighter">
                           {issue.decision}
                         </div>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-1 leading-relaxed">{issue.description}</p>
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          {/* Bottom-Right: Selected Discrepancy Details Form */}
-          <div className="flex-1 bg-white overflow-y-auto">
+          <div className="flex-1 bg-white overflow-y-auto scroll-smooth">
             {selectedIssue ? (
-              <div className="p-6 max-w-5xl mx-auto">
-                <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${
-                      selectedIssue.severity === IssueSeverity.HIGH ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 
-                      selectedIssue.severity === IssueSeverity.MEDIUM ? 'bg-amber-500' : 'bg-blue-500'
+              <div className="p-10 max-w-4xl">
+                <div className="flex items-center justify-between mb-10">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-4 h-4 rounded-full ${
+                      selectedIssue.severity === IssueSeverity.HIGH ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.4)]' : 
+                      selectedIssue.severity === IssueSeverity.MEDIUM ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-blue-500'
                     }`}></div>
-                    <h3 className="font-bold text-slate-900 text-xl tracking-tight">走查项详细设置</h3>
+                    <h3 className="font-black text-slate-900 text-2xl tracking-tight">修订走查详情</h3>
                   </div>
-                  <button 
-                    onClick={(e) => deleteIssue(selectedIssue.id, e)} 
-                    className="flex items-center gap-2 text-slate-400 hover:text-red-600 transition-all text-sm font-medium px-4 py-2 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth={2}/></svg>
-                    删除此走查项
-                  </button>
                 </div>
                 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-6">
-                  {/* Left Column: Core Info */}
-                  <div className="space-y-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                  <div className="space-y-8">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">差异标题</label>
+                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">问题标题 (Subject)</label>
                       <input 
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                        className="w-full border-b-2 border-slate-100 focus:border-indigo-600 py-3 text-lg font-bold text-slate-800 outline-none transition-all placeholder:text-slate-200"
                         value={selectedIssue.title}
                         onChange={(e) => updateIssue(selectedIssue.id, { title: e.target.value })}
-                        placeholder="输入简短的问题描述"
+                        placeholder="输入简短描述..."
                       />
                     </div>
 
-                    <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">设计标准 (Standard)</label>
-                        <div className="bg-indigo-50/50 text-indigo-700 p-3 rounded-lg border border-indigo-100 text-xs font-mono min-h-[44px] flex items-center">
-                          {selectedIssue.designValue || '未指定'}
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">设计预期</label>
+                        <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 text-xs font-bold text-indigo-700 min-h-[60px] flex items-center shadow-sm">
+                          {selectedIssue.designValue || 'AI 尚未识别具体数值'}
                         </div>
                       </div>
-                      <div className="flex-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">当前实现 (Actual)</label>
-                        <div className="bg-red-50/50 text-red-700 p-3 rounded-lg border border-red-100 text-xs font-mono min-h-[44px] flex items-center">
-                          {selectedIssue.devValue || '未指定'}
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">实际现状</label>
+                        <div className="bg-red-50/50 p-4 rounded-2xl border border-red-100 text-xs font-bold text-red-700 min-h-[60px] flex items-center shadow-sm">
+                          {selectedIssue.devValue || 'AI 尚未识别具体数值'}
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">具体差异描述</label>
+                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">差异化说明</label>
                       <textarea 
-                        rows={3}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none leading-relaxed"
+                        rows={4}
+                        className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl p-5 text-sm font-medium text-slate-600 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all resize-none leading-relaxed"
                         value={selectedIssue.description}
                         onChange={(e) => updateIssue(selectedIssue.id, { description: e.target.value })}
-                        placeholder="详细描述视觉差异的具体位置和内容..."
+                        placeholder="在此补充更详尽的走查发现..."
                       />
                     </div>
                   </div>
 
-                  {/* Right Column: Decisions & Notes */}
-                  <div className="space-y-5">
+                  <div className="space-y-8">
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">走查决策 (Audit Decision)</label>
-                      <div className="grid grid-cols-3 gap-3">
+                      <label className="text-[11px] font-black text-slate-400 uppercase mb-4 block tracking-widest">走查结论 (Decision)</label>
+                      <div className="grid grid-cols-1 gap-3">
                         {Object.values(AuditDecision).map(d => (
                           <button
                             key={d}
                             onClick={() => updateIssue(selectedIssue.id, { decision: d })}
-                            className={`py-2.5 text-[10px] font-bold uppercase rounded-xl border transition-all active:scale-95 ${
+                            className={`flex items-center justify-between px-6 py-4 rounded-2xl border-2 font-bold transition-all active:scale-95 ${
                               selectedIssue.decision === d 
-                                ? 'bg-slate-900 text-white border-slate-900 shadow-lg' 
-                                : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50/30'
+                                ? 'bg-slate-900 text-white border-slate-900 shadow-xl' 
+                                : 'bg-white text-slate-500 border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30'
                             }`}
                           >
-                            {d}
+                            <span className="text-xs uppercase tracking-widest">{d}</span>
+                            {selectedIssue.decision === d && (
+                              <svg className="w-5 h-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                            )}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">分类 & 严重级别</label>
-                      <div className="flex gap-4">
-                        <div className="flex-1">
-                          <select 
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-semibold bg-white outline-none focus:ring-2 focus:ring-indigo-500/20"
-                            value={selectedIssue.type}
-                            onChange={(e) => updateIssue(selectedIssue.id, { type: e.target.value as IssueType })}
-                          >
-                            {Object.values(IssueType).map(t => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                        <div className="flex-1">
-                          <select 
-                            className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-xs font-semibold bg-white outline-none focus:ring-2 focus:ring-indigo-500/20"
-                            value={selectedIssue.severity}
-                            onChange={(e) => updateIssue(selectedIssue.id, { severity: e.target.value as IssueSeverity })}
-                          >
-                            {Object.values(IssueSeverity).map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-widest">问题分类</label>
+                        <select 
+                          className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+                          value={selectedIssue.type}
+                          onChange={(e) => updateIssue(selectedIssue.id, { type: e.target.value as IssueType })}
+                        >
+                          {Object.values(IssueType).map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-widest">优先级</label>
+                        <select 
+                          className="w-full bg-white border-2 border-slate-100 rounded-xl px-4 py-3 text-xs font-bold outline-none focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+                          value={selectedIssue.severity}
+                          onChange={(e) => updateIssue(selectedIssue.id, { severity: e.target.value as IssueSeverity })}
+                        >
+                          {Object.values(IssueSeverity).map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase mb-1.5 block tracking-wider">备注 / 修改建议 (开发者可见)</label>
+                      <label className="text-[11px] font-black text-slate-400 uppercase mb-3 block tracking-widest">修订建议 (Optional)</label>
                       <input 
-                        placeholder="例如：请检查全局间距配置，目前偏移了 4px..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="输入建议的修改路径或技术参考..."
+                        className="w-full bg-slate-50/50 border border-slate-100 rounded-xl px-5 py-4 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-500 transition-all"
                         value={selectedIssue.note || ''}
                         onChange={(e) => updateIssue(selectedIssue.id, { note: e.target.value })}
                       />
@@ -452,13 +407,17 @@ const DifferenceAuditView: React.FC<DifferenceAuditViewProps> = ({ project, onUp
                 </div>
               </div>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-300 flex-col gap-4">
-                <svg className="w-16 h-16 opacity-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" strokeWidth={1.5}/></svg>
-                <p className="text-sm font-medium">从左侧选择一个差异项开始详细核对</p>
+              <div className="h-full flex items-center justify-center text-slate-300 flex-col gap-6 p-20 text-center">
+                <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
+                  <svg className="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" strokeWidth={1.5}/></svg>
+                </div>
+                <div>
+                  <h4 className="text-slate-900 font-black text-lg mb-2">选择一个走查项</h4>
+                  <p className="text-sm font-medium text-slate-400 max-w-xs">请从左侧列表选择 AI 识别的差异点，进行细节核对与决策。</p>
+                </div>
               </div>
             )}
           </div>
-
         </div>
       </div>
     </div>
